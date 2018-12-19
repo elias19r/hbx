@@ -73,7 +73,7 @@ func TestNew(t *testing.T) {
 		}
 
 		want := ErrInvalidFormat
-		have, ok := err.(*Error)
+		have, ok := err.(Error)
 		if !ok {
 			t.Fatalf("invalid format error must typecast to numeric.Error\n")
 		}
