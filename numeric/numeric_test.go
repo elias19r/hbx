@@ -5,9 +5,9 @@ import (
 	"testing"
 )
 
-func TestSCALE(t *testing.T) {
-	if SCALE != 36 {
-		t.Errorf("\nwant: %d\nhave: %d\n", 36, SCALE)
+func TestScale(t *testing.T) {
+	if Scale != 36 {
+		t.Errorf("\nwant: %d\nhave: %d\n", 36, Scale)
 	}
 }
 

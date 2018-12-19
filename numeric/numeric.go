@@ -9,16 +9,16 @@ import (
 )
 
 const (
-	// SCALE determines the Numeric's scale. It is fixed to 36.
+	// Scale determines the Numeric's scale. It is fixed to 36.
 	// The maximum precision is not specified.
-	SCALE = 36
+	Scale = 36
 )
 
 var (
 	// regexpPattern specify the string representation of a Numeric.
 	// Numeric values must be represented with a point and at least one unit
 	// digit and one decimal digit. A negative sign is optional.
-	regexpPattern = `^(-?)(\d+)\.(\d{1,` + fmt.Sprintf("%d", SCALE) + `})$`
+	regexpPattern = `^(-?)(\d+)\.(\d{1,` + fmt.Sprintf("%d", Scale) + `})$`
 	pattern       = regexp.MustCompile(regexpPattern)
 )
 
@@ -32,7 +32,7 @@ func init() {
 	// Populate big10Pows.
 	big10Pows = append(big10Pows, big.NewInt(1))  // 10^0
 	big10Pows = append(big10Pows, big.NewInt(10)) // 10^1
-	for i := 2; i <= SCALE; i++ {                 // 10^2 to 10^SCALE
+	for i := 2; i <= Scale; i++ {                 // 10^2 to 10^SCALE
 		big10Pows = append(
 			big10Pows,
 			new(big.Int).Mul(big10Pows[1], big10Pows[i-1]),
@@ -59,7 +59,7 @@ func New(s string) (Numeric, error) {
 
 	// Padding zeros to the right of decimal digits part so that we ensure
 	// a correct scale when creating the bigint.
-	decimals += strings.Repeat("0", SCALE-len(decimals))
+	decimals += strings.Repeat("0", Scale-len(decimals))
 
 	// Try to create bigint and return a new Numeric.
 	value, ok := new(big.Int).SetString(units+decimals, 10)
@@ -119,7 +119,7 @@ func Mul(a, b Numeric) Numeric {
 	}
 	c := Numeric{value: new(big.Int)}
 	c.value.Mul(a.value, b.value)
-	c.value.QuoRem(c.value, big10Pows[SCALE], bigBlank)
+	c.value.QuoRem(c.value, big10Pows[Scale], bigBlank)
 	return c
 }
 
@@ -148,7 +148,7 @@ func (a Numeric) Mul(b Numeric) {
 		return
 	}
 	a.value.Mul(a.value, b.value)
-	a.value.QuoRem(a.value, big10Pows[SCALE], bigBlank)
+	a.value.QuoRem(a.value, big10Pows[Scale], bigBlank)
 }
 
 // Truncate limits a to n decimal digits.
@@ -157,10 +157,10 @@ func (a Numeric) Truncate(n int) {
 		log.Println(ErrNil.WithMessage("Numeric.Truncate(): a is nil"))
 		return
 	}
-	if n < 0 || n >= SCALE {
+	if n < 0 || n >= Scale {
 		return
 	}
-	n = SCALE - n
+	n = Scale - n
 	bigBlank.QuoRem(a.value, big10Pows[n], bigRem)
 	a.value.Sub(a.value, bigRem)
 }
@@ -171,10 +171,10 @@ func (a Numeric) RoundUp(n int) {
 		log.Println(ErrNil.WithMessage("Numeric.RoundUp(): a is nil"))
 		return
 	}
-	if n < 0 || n >= SCALE {
+	if n < 0 || n >= Scale {
 		return
 	}
-	n = SCALE - n
+	n = Scale - n
 	bigBlank.QuoRem(a.value, big10Pows[n], bigRem)
 	if bigRem.Cmp(bigZero) == 1 {
 		a.value.Sub(a.value, bigRem)
@@ -260,7 +260,7 @@ func (a Numeric) GTE(b Numeric) bool {
 func (a Numeric) string() string {
 	// Padding zeros to ensure at least SCALE + 1 chars.
 	str := a.value.String()
-	str = strings.Repeat("0", SCALE-len(str)+1) + str
+	str = strings.Repeat("0", Scale-len(str)+1) + str
 
 	// Reposition negative sign at beginning if any.
 	if a.value.Sign() == -1 {
@@ -268,7 +268,7 @@ func (a Numeric) string() string {
 	}
 
 	// Place decimal point.
-	return str[:len(str)-SCALE] + "." + str[len(str)-SCALE:]
+	return str[:len(str)-Scale] + "." + str[len(str)-Scale:]
 }
 
 // String returns a string representation of Numeric according to the format
@@ -288,9 +288,9 @@ func (a Numeric) StringWithScale(n int) string {
 		log.Println(ErrNil.WithMessage("Numeric.StringWithScale(): a is nil"))
 		return "0.0"
 	}
-	if n < 1 || n > SCALE {
-		n = SCALE
+	if n < 1 || n > Scale {
+		n = Scale
 	}
 	str := a.string()
-	return str[:len(str)-SCALE+n]
+	return str[:len(str)-Scale+n]
 }
