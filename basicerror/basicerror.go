@@ -49,11 +49,16 @@ func (e *BasicError) PrevError() error {
 	return e.prevError
 }
 
-func (e *BasicError) SetPrevError(err error) {
+func (e *BasicError) WithPrevError(err error) *BasicError {
 	if e == nil {
-		return
+		return &BasicError{}
 	}
-	e.prevError = err
+	return &BasicError{
+		code:      e.code,
+		name:      e.name,
+		message:   e.message,
+		prevError: err,
+	}
 }
 
 // Error implements error interface.
