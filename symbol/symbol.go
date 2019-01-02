@@ -34,9 +34,8 @@ type Symbol struct {
 }
 
 func New(s string) (Symbol, error) {
-	// Match string pattern.
-	if !pattern.MatchString(s) {
-		return Symbol{}, ErrInvalidFormat.WithMessage("New(): regexp pattern mismatched: %s", s)
+	if err := validateValue(s); err != nil {
+		return Symbol{}, ErrInvalidFormat.WithMessage("New()").WithPrevError(err)
 	}
 	return Symbol{value: s}, nil
 }
@@ -86,4 +85,18 @@ func (s Symbol) Strip() string {
 // e.g.: "XRP/BTC" returns "XRP_BTC"
 func (s Symbol) Underscore() string {
 	return strings.Replace(string(s.value), Separator, "_", 1)
+}
+
+func (s Symbol) Validate() error {
+	return validateValue(s.value)
+}
+
+func validateValue(s string) error {
+	// Match string pattern.
+	if !pattern.MatchString(s) {
+		return ErrInvalidFormat.WithMessage(
+			"validateValue(): regexp pattern mismatched: %s", s,
+		)
+	}
+	return nil
 }
