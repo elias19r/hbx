@@ -1,216 +1,149 @@
 package numeric
 
 import (
+	"log"
 	"math/big"
 	"testing"
 )
 
-func TestScale(t *testing.T) {
-	if Scale != 36 {
-		t.Errorf("\nwant: %d\nhave: %d\n", 36, Scale)
+// buildNumeric is a helper function to create valid Numerics to use in tests.
+func buildNumeric(s string) Numeric {
+	n, err := New(s)
+	if err != nil {
+		log.Fatalf("Must test with valid Numeric\n")
 	}
+
+	return n
+}
+
+// buildBigInt is a helper function to create valid big.Ints to use in tests.
+func buildBigInt(s string) *big.Int {
+	i, ok := new(big.Int).SetString(s, 10)
+	if !ok {
+		log.Fatalf("Must test with valid big.Int\n")
+	}
+
+	return i
 }
 
 func TestNew(t *testing.T) {
-	// Helper function to create bigints for tests.
-	var createBigInt = func(s string) *big.Int {
-		bigint, ok := new(big.Int).SetString(s, 10)
-		if !ok {
-			t.Fatalf("createBigInt(): fail to create bigint, test is wrongly written: %s\n", s)
-		}
-		return bigint
-	}
+	t.Parallel()
 
-	// Test valid formats.
-	validFormats := []struct {
-		str   string
-		value *big.Int
-	}{
-		{"0.0", createBigInt("0")},
-		{"0.1", createBigInt("100000000000000000000000000000000000")},
-		{"-0.1", createBigInt("-100000000000000000000000000000000000")},
-		{"1.0", createBigInt("1000000000000000000000000000000000000")},
-		{"-1.0", createBigInt("-1000000000000000000000000000000000000")},
-		{"12.1234", createBigInt("12123400000000000000000000000000000000")},
-		{"12.00000004", createBigInt("12000000040000000000000000000000000000")},
-		{"9999999999.003871739120213112", createBigInt("9999999999003871739120213112000000000000000000")},
-	}
+	t.Run("When given valid formats", func(t *testing.T) {
+		t.Parallel()
 
-	for _, test := range validFormats {
-		n, err := New(test.str)
-		if err != nil {
-			t.Fatalf("valid format must create Numeric without error: %s\n", test.str)
+		type validFormatsTest struct {
+			n, bigIntValue string
 		}
-		if n.value == nil {
-			t.Fatalf("valid format must have non-nil bigint value: %s\n", test.str)
+		validFormats := func() []validFormatsTest {
+			return []validFormatsTest{
+				{"0.0", "0"},
+				{"0000.0", "0"},
+				{"0.1", "100000000000000000000000000000000000000000"},
+				{"-0.1", "-100000000000000000000000000000000000000000"},
+				{"1.0", "1000000000000000000000000000000000000000000"},
+				{"-1.0", "-1000000000000000000000000000000000000000000"},
+				{"12.1234", "12123400000000000000000000000000000000000000"},
+				{"-12.1234", "-12123400000000000000000000000000000000000000"},
+				{"12.00000004", "12000000040000000000000000000000000000000000"},
+				{"-12.00000004", "-12000000040000000000000000000000000000000000"},
+				{"9999999999.003871739120213112", "9999999999003871739120213112000000000000000000000000"},
+				{"-9999999999.003871739120213112", "-9999999999003871739120213112000000000000000000000000"},
+			}
 		}
 
-		want := test.value
-		have := n.value
+		t.Run("It creates the underlying big.Int accordingly", func(t *testing.T) {
+			t.Parallel()
 
-		if want.Cmp(have) != 0 {
-			t.Errorf("\nwant: %s\nhave: %s\n", want, have)
+			for _, test := range validFormats() {
+				n := buildNumeric(test.n)
+				bigIntValue := buildBigInt(test.bigIntValue)
+
+				if n.value.Cmp(bigIntValue) != 0 {
+					t.Errorf("\nWant: %s\nHave: %s\n", bigIntValue, n.value)
+				}
+			}
+		})
+	})
+
+	t.Run("When given invalid formats", func(t *testing.T) {
+		t.Parallel()
+
+		invalidFormats := func() []string {
+			return []string{
+				"", "abcd",
+				"0", "-0", "+0",
+				"0.", "-0.", "+0.",
+				".0", "-.0", "+.0",
+				"1", "-1", "+1",
+				"1.", "-1.", "+1.",
+				".1", "-.1", "+.1",
+				"10", "-10", "+10",
+				"10.", "-10.", "+10.",
+				".10", "-.10", "+.10",
+				"--1.0", "+1.0",
+				"12..12345", ".12.12345", "12.12345.",
+				"10e2", "-10e2",
+			}
 		}
-	}
 
-	// Test invalid formats.
-	invalidFormats := []string{
-		"0.",
-		".1",
-		"-.1",
-		"10",
-		"--1.0",
-		"+1.0",
-		"12..1234",
-		"12.0000.0004",
-		"12.00000004.",
-	}
+		t.Run("It returns ErrInvalidFormat", func(t *testing.T) {
+			t.Parallel()
 
-	for _, test := range invalidFormats {
-		_, err := New(test)
-		if err == nil {
-			t.Fatalf("invalid format must create Numeric WITH error: %s\n", test)
-		}
+			for _, test := range invalidFormats() {
+				_, err := New(test)
 
-		want := ErrInvalidFormat
-		have, ok := err.(Error)
-		if !ok {
-			t.Fatalf("invalid format error must typecast to numeric.Error\n")
-		}
-
-		if want.Code() != have.Code() {
-			t.Errorf("\nwant: %s\nhave: %s\n", want, have)
-		}
-	}
-}
-
-func TestNewZero(t *testing.T) {
-	n := NewZero()
-	zero := big.NewInt(0)
-
-	if n.value == nil || n.value.Cmp(zero) != 0 {
-		t.Errorf("\nwant: %d\nhave: %d\n", n.value, zero)
-	}
+				_, ok := err.(ErrInvalidFormat)
+				if !ok {
+					t.Errorf("\nWant: %s returns ErrInvalidFormat\n"+
+						"Have: %s does not return ErrInvalidFormat\n",
+						test, test)
+				}
+			}
+		})
+	})
 }
 
 func TestCopy(t *testing.T) {
-	n, err := New("123.456789")
-	if err != nil {
-		t.Fatalf("must test with a valid Numeric\n")
-	}
-	cp := Copy(n)
+	t.Parallel()
 
-	if n.value == nil || cp.value == nil ||
-		n.value == cp.value || n.value.Cmp(cp.value) != 0 {
-		t.Errorf("\nwant: %s (%p)\nhave: %s (%p)\n",
-			n.value, n.value,
-			cp.value, cp.value)
-	}
-}
+	t.Run("When the given Numeric has an underlying nil big.Int", func(t *testing.T) {
+		t.Parallel()
 
-func TestAdd(t *testing.T) {
-	// TODO
-}
+		cp := Copy(Numeric{})
 
-func TestSub(t *testing.T) {
-	// TODO
-}
+		t.Run("It sets cp to zero", func(t *testing.T) {
+			t.Parallel()
 
-func TestMul(t *testing.T) {
-	// TODO
-}
-func TestNumericAdd(t *testing.T) {
-	// Add two positive Numeric values.
-	a, err := New("22123.4456789")
-	if err != nil {
-		t.Fatalf("must test with valid Numeric: invalid a\n")
-	}
-	aValuePtr := a.value
+			if cp.value.Cmp(zero) != 0 {
+				t.Errorf("\nWant: %s\nHave: %s\n", zero, cp.value)
+			}
+		})
+	})
 
-	b, err := New("922187.112341")
-	if err != nil {
-		t.Fatalf("must test with valid Numeric: invalid b\n")
-	}
-	bigIntResult, ok := new(big.Int).SetString("944310558019900000000000000000000000000000", 10)
-	if !ok {
-		t.Fatalf("must create valid bigint for comparison: invalid bigIntResult\n")
-	}
+	t.Run("It makes cp's underlying big.Int value equals to n's", func(t *testing.T) {
+		t.Parallel()
 
-	a.Add(b)
+		n := buildNumeric("123.456789")
+		cp := Copy(n)
 
-	if a.value != aValuePtr {
-		t.Errorf("\nwant: %p\nhave: %p\n", a.value, aValuePtr)
-	}
-	if a.value.Cmp(bigIntResult) != 0 {
-		t.Errorf("\nwant: %s\nhave: %s\n", a.value, bigIntResult)
-	}
+		if cp.value.Cmp(n.value) != 0 {
+			t.Errorf("\nWant: %s\nHave: %s\n", n.value, cp.value)
+		}
+	})
 
-	// Add positive and negative Numeric values.
-	// TODO
+	t.Run("It creates a new big.Int for c", func(t *testing.T) {
+		t.Parallel()
 
-	// Add two negative Numeric values.
-	// TODO
+		n := buildNumeric("123.456789")
+		cp := Copy(n)
 
-	// Add negative and positive Numeric values.
-	// TODO
-}
-
-func TestNumericSub(t *testing.T) {
-	// TODO
-}
-
-func TestNumericMul(t *testing.T) {
-	// TODO
-}
-
-func TestNumericTruncate(t *testing.T) {
-	// TODO
-}
-
-func TestNumericRoundUp(t *testing.T) {
-	// TODO
-}
-
-func TestNumericIsNegative(t *testing.T) {
-	// TODO
-}
-
-func TestNumericIsPositive(t *testing.T) {
-	// TODO
-}
-
-func TestNumericIsZero(t *testing.T) {
-	// TODO
-}
-
-func TestNumericLT(t *testing.T) {
-	// TODO
-}
-
-func TestNumericLTE(t *testing.T) {
-	// TODO
-}
-
-func TestNumericEQ(t *testing.T) {
-	// TODO
-}
-
-func TestNumericGT(t *testing.T) {
-	// TODO
-}
-
-func TestNumericGTE(t *testing.T) {
-	// TODO
-}
-
-func TestNumericstring(t *testing.T) {
-	// TODO
-}
-
-func TestNumericString(t *testing.T) {
-	// TODO
-}
-
-func TestNumericStringWithScale(t *testing.T) {
-	// TODO
+		if cp.value == n.value {
+			t.Errorf("\nWant: %p != %p"+
+				"\nHave: %p == %p\n",
+				cp.value, n.value,
+				cp.value, n.value,
+			)
+		}
+	})
 }
