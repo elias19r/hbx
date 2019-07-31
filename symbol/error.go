@@ -1,27 +1,16 @@
 package symbol
 
-import (
-	"../basicerror"
-)
+// ErrInvalidFormat occurs when an invalid string format is used to create a Symbol.
+type ErrInvalidFormat string
 
-type Error struct {
-	*basicerror.BasicError
+func (e ErrInvalidFormat) Error() string {
+	return "symbol.ErrInvalidFormat: " + string(e)
 }
 
-// List of Symbol errors. Each error must have a unique code.
-// Code 0 is reserved for ErrGeneral.
-var (
-	ErrInvalidFormat = Error{basicerror.New(1, "ErrInvalidFormat")}
-)
+// ErrInvalidPair occurs when a symbol is a pair of the same assets,
+// i.e. base and quote are equal.
+type ErrInvalidPair string
 
-func (e Error) Name() string {
-	return "Symbol" + e.BasicError.Name()
-}
-
-func (e Error) WithMessage(format string, a ...interface{}) Error {
-	return Error{e.BasicError.WithMessage(format, a...)}
-}
-
-func (e Error) WithPrevError(err error) Error {
-	return Error{e.BasicError.WithPrevError(err)}
+func (e ErrInvalidPair) Error() string {
+	return "symbol.ErrInvalidPair: " + string(e)
 }
